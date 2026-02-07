@@ -20,6 +20,8 @@ What's even even cooler, is that we can do further optimisations like sorting th
 # TODOs
 - [ ] Figure out how to missuse hashmaps as 'functional match expressions'
 - [ ] Do the derivation rules
+- [ ] Add debug and analysis tools
+- [ ] How should/can i handle si units? This is important for physics.
 - [X] Try out with shaders? https://github.com/Snektron/vulkan-zig/tree/master/examples
       Maybe this can be rolled into compute shaders?
 	  
