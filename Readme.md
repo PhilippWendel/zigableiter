@@ -1,5 +1,5 @@
 # zigableiter
-Lightning fast derivations in zig[^1]
+Lightning fast derivations in zig[^1], because blazingly fast is just to slow.
 
 [^1]: We never spoke of compile time
 
@@ -16,3 +16,9 @@ Eval is a basic interpreter that walks through the ast and then calculates the f
 The cool thing is since zig has comptime we can do these transformations at compile time.
 What's even cooler, is that in theory the compiler should be able to resolve and inline the whole interpreter loop. 
 What's even even cooler, is that we can do further optimisations like sorting the variables in the tree to get them closer together for less cache misses.
+
+# TODOs
+- [ ] Figure out how to missuse hashmaps as 'functional match expressions'
+- [ ] Do the derivation rules
+- [ ] Try out with shaders? https://github.com/Snektron/vulkan-zig/tree/master/examples
+      Maybe this can be rolled into compute shaders
