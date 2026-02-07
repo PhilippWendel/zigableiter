@@ -9,8 +9,8 @@ pub fn Ast(T: type) type {
         mul: *const LR,
         div: *const LR,
         pow: *const LR,
-        sin: Self,
-        cos: Self,
+        sin: *const Self,
+        cos: *const Self,
         variable: T,
         constant: T,
 
@@ -40,6 +40,8 @@ pub fn Ast(T: type) type {
                         },
                     },
                 },
+                .sin => |x| .{ .cos = x },
+                .cos => |x| .{ .mul = &.{ .l = .{ .constant = (-1) }, .r = .{ .sin = x } } },
                 else => ast,
             };
         }
@@ -50,6 +52,8 @@ pub fn Ast(T: type) type {
                 .mul => |node| apply(fun.mul, node.*),
                 .div => |node| apply(fun.div, node.*),
                 .pow => |node| apply(fun.pow, node.*),
+                .sin => |x| std.math.sin(x.eval() orelse return null),
+                .cos => |x| std.math.cos(x.eval() orelse return null),
                 .constant => |constant| constant,
                 .variable => |value| value,
             };
@@ -89,6 +93,22 @@ test "Derivation of variable (e.g. x) is 1" {
 
 test "Power rule" {
     const pow = TestAst{ .pow = &.{ .l = .{ .variable = 1 }, .r = .{ .variable = 2 } } };
-    const pow_d = pow.derive().?;
+    const pow_d = comptime pow.derive().?;
     try std.testing.expectApproxEqAbs(pow_d.eval().?, 2.0, 0.00000001);
+}
+
+test "derive sin to cos" {
+    const sin = TestAst{ .sin = &.{ .constant = 1 } };
+    const cos = TestAst{ .cos = &.{ .constant = 1 } };
+    try std.testing.expectApproxEqAbs(sin.derive().?.eval().?, cos.eval().?, 0.0000001);
+}
+
+test "derive cos to -sin" {
+    const cos = TestAst{ .cos = &.{ .constant = 1 } };
+    const cos_d = comptime cos.derive().?;
+    const minus_sin = TestAst{ .mul = &.{
+        .l = .{ .constant = -1 },
+        .r = .{ .sin = &.{ .constant = 1 } },
+    } };
+    try std.testing.expectApproxEqAbs(cos_d.eval().?, minus_sin.eval().?, 0.0000001);
 }
