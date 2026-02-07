@@ -20,13 +20,13 @@ pub fn Ast(T: type) type {
         pub const @"1" = Self{ .num = 1 };
         pub const @"-1" = Self{ .num = -1 };
 
-        fn apply1(f: fn (T) T, args: Args(1)) ?T {
-            const l = args[0].eval() orelse return null;
+        inline fn apply1(f: fn (T) callconv(.@"inline") T, args: Args(1)) T {
+            const l = args[0].eval();
             return f(l);
         }
-        fn apply2(f: fn (T, T) T, args: Args(2)) ?T {
-            const l = args[0].eval() orelse return null;
-            const r = args[1].eval() orelse return null;
+        inline fn apply2(f: fn (T, T) callconv(.@"inline") T, args: Args(2)) T {
+            const l = args[0].eval();
+            const r = args[1].eval();
             return f(l, r);
         }
 
@@ -84,7 +84,7 @@ pub fn Ast(T: type) type {
         //     return .{};
         // }
 
-        pub fn eval(ast: Self) ?T {
+        pub fn eval(ast: Self) T {
             return switch (ast) {
                 .add => |node| apply2(fun.add, node),
                 .sub => |node| apply2(fun.sub, node),
@@ -98,25 +98,25 @@ pub fn Ast(T: type) type {
         }
 
         const fun = struct {
-            pub fn add(a: T, b: T) T {
+            pub inline fn add(a: T, b: T) T {
                 return a + b;
             }
-            pub fn sub(a: T, b: T) T {
+            pub inline fn sub(a: T, b: T) T {
                 return a - b;
             }
-            pub fn mul(a: T, b: T) T {
+            pub inline fn mul(a: T, b: T) T {
                 return a * b;
             }
-            pub fn div(a: T, b: T) T {
+            pub inline fn div(a: T, b: T) T {
                 return a / b;
             }
-            pub fn pow(a: T, b: T) T {
+            pub inline fn pow(a: T, b: T) T {
                 return std.math.pow(T, a, b);
             }
-            pub fn sin(a: T) T {
+            pub inline fn sin(a: T) T {
                 return std.math.sin(a);
             }
-            pub fn cos(a: T) T {
+            pub inline fn cos(a: T) T {
                 return std.math.cos(a);
             }
         };
@@ -172,7 +172,7 @@ test "Power rule" {
         const exp = d.exp;
         const pow = TestAst{ .pow = .{ &.{ .val = d.base }, &.{ .val = exp } } };
         const pow_d = comptime pow.derive();
-        const res = pow_d.eval().?;
+        const res = pow_d.eval();
         try std.testing.expectApproxEqAbs(d.derived, res, 0.00000001);
     }
 }
@@ -180,7 +180,7 @@ test "Power rule" {
 test "derive sin to cos" {
     const sin = TestAst{ .sin = .{&TestAst.@"1"} };
     const cos = TestAst{ .cos = .{&TestAst.@"1"} };
-    try std.testing.expectApproxEqAbs(sin.derive().eval().?, cos.eval().?, 0.0000001);
+    try std.testing.expectApproxEqAbs(sin.derive().eval(), cos.eval(), 0.0000001);
 }
 
 test "derive cos to -sin" {
@@ -188,5 +188,5 @@ test "derive cos to -sin" {
     const cos = TestAst{ .cos = x };
     const cos_d = comptime cos.derive();
     const minus_sin = TestAst{ .mul = .{ &TestAst.@"-1", &.{ .sin = x } } };
-    try std.testing.expectApproxEqAbs(cos_d.eval().?, minus_sin.eval().?, 0.0000001);
+    try std.testing.expectApproxEqAbs(cos_d.eval(), minus_sin.eval(), 0.0000001);
 }

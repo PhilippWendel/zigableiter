@@ -7,7 +7,7 @@ pub fn main() !void {
     std.debug.print("Simple zigableiter demo\n", .{});
 
     const function = Ast{ .add = .{ &Ast.@"1", &Ast.@"1" } };
-    std.debug.print("Num: {d}\n", .{comptime function.eval().?});
+    std.debug.print("Num: {d}\n", .{comptime function.eval()});
 
     const base = 2;
     std.debug.print("Derive {d}^n for n = 0 to 10\n", .{base});
@@ -20,8 +20,8 @@ pub fn main() !void {
             i,
             pow.pow[0].num,
             pow.pow[1].num,
-            pow.eval().?,
-            pow_d.eval().?,
+            pow.eval(),
+            pow_d.eval(),
             exp * std.math.pow(f32, base, exp - 1),
         });
         pow_d.print();
@@ -35,6 +35,6 @@ pub fn main() !void {
             } },
         };
         const pow_d = comptime pow.derive();
-        std.debug.print("{d}: {d}^{d}= {d}\n", .{ i, pow.pow[0].num, pow.pow[1].num, pow_d.eval().? });
+        std.debug.print("{d}: {d}^{d}= {d}\n", .{ i, pow.pow[0].num, pow.pow[1].num, pow_d.eval() });
     }
 }
