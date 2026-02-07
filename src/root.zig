@@ -14,11 +14,11 @@ pub fn Ast(T: type) type {
         pow: Args(2),
         sin: Args(1),
         cos: Args(1),
-        variable: T,
-        constant: T,
+        val: T, // Variable, e.g. x
+        num: T, // Constant, e.g 7.
 
-        pub const @"1" = Self{ .constant = 1 };
-        pub const @"-1" = Self{ .constant = -1 };
+        pub const @"1" = Self{ .num = 1 };
+        pub const @"-1" = Self{ .num = -1 };
 
         fn apply1(f: fn (T) T, args: Args(1)) ?T {
             const l = args[0].eval() orelse return null;
@@ -30,29 +30,60 @@ pub fn Ast(T: type) type {
             return f(l, r);
         }
 
-        pub fn derive(ast: Self) ?Self {
+        pub fn derive(ast: Self) Self {
             return switch (ast) {
-                .constant => null,
-                .variable => Self.@"1",
-                .pow => |args| power_rule(args),
+                .num => .{ .num = 0 },
+                .val => Self.@"1",
+                .pow => |args| derive_power_rule(args),
+                .add => |args| derive_sum_rule(args),
+                .sub => |args| derive_difference_rule(args),
+                .mul => |args| derive_product_rule(args),
+                .div => |args| derive_quotient_rule(args),
                 .sin => |x| .{ .cos = x },
                 .cos => |x| .{ .mul = .{ &Self.@"-1", &.{ .sin = x } } },
-                else => ast,
             };
         }
-        fn power_rule(args: Args(2)) Self {
-            return .{
-                .mul = .{
-                    args[1],
-                    &.{
-                        .pow = .{
-                            args[0],
-                            &.{ .sub = .{ args[1], &Self.@"1" } },
-                        },
-                    },
-                },
-            };
+
+        /// (x^n)' = nx^(n-1)
+        fn derive_power_rule(args: Args(2)) Self {
+            return .{ .mul = .{
+                args[1],
+                &.{ .pow = .{
+                    args[0],
+                    &.{ .sub = .{ args[1], &Self.@"1" } },
+                } },
+            } };
         }
+        fn derive_sum_rule(args: Args(2)) Self {
+            return .{ .add = .{ &args[0].derive(), &args[0].derive() } };
+        }
+
+        /// (u-v)' = u'-v'
+        fn derive_difference_rule(args: Args(2)) Self {
+            return .{ .sub = .{ &args[0].derive(), &args[0].derive() } };
+        }
+
+        /// (u*v)' = u'*v+u*v'
+        fn derive_product_rule(args: Args(2)) Self {
+            return .{ .add = .{
+                &.{ .mul = .{ &args[0].derive(), args[1] } },
+                &.{ .mul = .{ args[0], &args[1].derive() } },
+            } };
+        }
+
+        fn derive_quotient_rule(args: Args(2)) Self {
+            const dividend = Self{ .sub = .{
+                &.{ .mul = .{ args[1], &args[0].derive() } },
+                &.{ .mul = .{ args[0], &args[1].derive() } },
+            } };
+            const divisor = Self{ .pow = .{ args[1], &.{ .num = 2 } } };
+            return .{ .div = .{ &dividend, &divisor } };
+        }
+        // f(x) = g(h(x)) -> f'(x) = g'(h(x)) * h'(x)
+        // fn derive_chain_rule(args: Args(2)) Self {
+        //     return .{};
+        // }
+
         pub fn eval(ast: Self) ?T {
             return switch (ast) {
                 .add => |node| apply2(fun.add, node),
@@ -62,7 +93,7 @@ pub fn Ast(T: type) type {
                 .pow => |node| apply2(fun.pow, node),
                 .sin => |node| apply1(fun.sin, node),
                 .cos => |node| apply1(fun.cos, node),
-                .variable, .constant => |value| value,
+                .val, .num => |value| value,
             };
         }
 
@@ -104,7 +135,7 @@ pub fn Ast(T: type) type {
                     std.debug.print("{s}\n", .{@tagName(self)});
                     for (v) |s| s.printIndented(indent_new);
                 },
-                .variable, .constant => |num| std.debug.print("{d}\n", .{num}),
+                .val, .num => |num| std.debug.print("{d}\n", .{num}),
             }
         }
     };
@@ -114,12 +145,12 @@ const TestAst = Ast(f32);
 
 test "Derivation of a constant is 0" {
     const constant = TestAst.@"1";
-    try std.testing.expectEqual(constant.derive(), null);
+    try std.testing.expectEqual(constant.derive(), TestAst{ .num = 0 });
 }
 
 test "Derivation of variable (e.g. x) is 1" {
-    const variable = TestAst{ .variable = 2.0 };
-    try std.testing.expectEqualDeep(variable.derive().?, TestAst.@"1");
+    const variable = TestAst{ .val = 2.0 };
+    try std.testing.expectEqualDeep(variable.derive(), TestAst.@"1");
 }
 
 test "Power rule" {
@@ -139,8 +170,8 @@ test "Power rule" {
     };
     inline for (data) |d| {
         const exp = d.exp;
-        const pow = TestAst{ .pow = .{ &.{ .variable = d.base }, &.{ .variable = exp } } };
-        const pow_d = comptime pow.derive().?;
+        const pow = TestAst{ .pow = .{ &.{ .val = d.base }, &.{ .val = exp } } };
+        const pow_d = comptime pow.derive();
         const res = pow_d.eval().?;
         try std.testing.expectApproxEqAbs(d.derived, res, 0.00000001);
     }
@@ -149,13 +180,13 @@ test "Power rule" {
 test "derive sin to cos" {
     const sin = TestAst{ .sin = .{&TestAst.@"1"} };
     const cos = TestAst{ .cos = .{&TestAst.@"1"} };
-    try std.testing.expectApproxEqAbs(sin.derive().?.eval().?, cos.eval().?, 0.0000001);
+    try std.testing.expectApproxEqAbs(sin.derive().eval().?, cos.eval().?, 0.0000001);
 }
 
 test "derive cos to -sin" {
     const x = TestAst.Args(1){&TestAst.@"1"};
     const cos = TestAst{ .cos = x };
-    const cos_d = comptime cos.derive().?;
+    const cos_d = comptime cos.derive();
     const minus_sin = TestAst{ .mul = .{ &TestAst.@"-1", &.{ .sin = x } } };
     try std.testing.expectApproxEqAbs(cos_d.eval().?, minus_sin.eval().?, 0.0000001);
 }

@@ -14,16 +14,27 @@ pub fn main() !void {
 
     inline for (0..10) |i| {
         const exp = @as(f32, @floatFromInt(i));
-        const pow = Ast{ .pow = .{ &.{ .constant = base }, &.{ .constant = exp } } };
-        const pow_d = comptime pow.derive().?;
-        std.debug.print("{d}: {d}^{d}={d}; Auto Derived: {d}; Hand Derived: {d}\n", .{ i, pow.pow[0].constant, pow.pow[1].constant, pow.eval().?, pow_d.eval().?, exp * std.math.pow(f32, base, exp - 1) });
+        const pow = Ast{ .pow = .{ &.{ .num = base }, &.{ .num = exp } } };
+        const pow_d = comptime pow.derive();
+        std.debug.print("{d}: {d}^{d}={d}; Auto Derived: {d}; Hand Derived: {d}\n", .{
+            i,
+            pow.pow[0].num,
+            pow.pow[1].num,
+            pow.eval().?,
+            pow_d.eval().?,
+            exp * std.math.pow(f32, base, exp - 1),
+        });
         pow_d.print();
     }
 
     std.debug.print("Derive {d}^n for n = -10 to 0\n", .{base});
     inline for (0..10) |i| {
-        const pow = Ast{ .pow = .{ &.{ .constant = base }, &.{ .constant = (-1) * @as(f32, @floatFromInt(i)) } } };
-        const pow_d = comptime pow.derive().?;
-        std.debug.print("{d}: {d}^{d}= {d}\n", .{ i, pow.pow[0].constant, pow.pow[1].constant, pow_d.eval().? });
+        const pow = Ast{
+            .pow = .{ &.{ .num = base }, &.{
+                .num = (-1) * @as(f32, @floatFromInt(i)),
+            } },
+        };
+        const pow_d = comptime pow.derive();
+        std.debug.print("{d}: {d}^{d}= {d}\n", .{ i, pow.pow[0].num, pow.pow[1].num, pow_d.eval().? });
     }
 }
