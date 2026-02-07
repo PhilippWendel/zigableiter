@@ -1,7 +1,7 @@
 # zigableiter
-Lightning fast derivations in zig[^1], because blazingly fast is just to slow.
+Lightning fast automatic derivations in zig[^1], because blazingly fast is just to slow.
 
-[^1]: We never spoke of compile time
+[^1]: We never spoke of compile times
 
 ## How does it work
 1. Build an ast of your math expression
@@ -19,6 +19,8 @@ What's even even cooler, is that we can do further optimisations like sorting th
 
 # TODOs
 - [ ] Figure out how to missuse hashmaps as 'functional match expressions'
+- [ ] Find a better distinction between val (var) and num (const)
+      How can compiler optimise on nums?
 - [ ] Do the derivation rules
 - [ ] Add debug and analysis tools
 - [ ] How should/can i handle si units? This is important for physics.
