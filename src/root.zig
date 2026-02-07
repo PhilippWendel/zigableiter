@@ -1,23 +1,49 @@
-//! By convention, root.zig is the root source file when making a library.
 const std = @import("std");
 
-pub fn bufferedPrint() !void {
-    // Stdout is for the actual output of your application, for example if you
-    // are implementing gzip, then only the compressed bytes should be sent to
-    // stdout, not any debugging messages.
-    var stdout_buffer: [1024]u8 = undefined;
-    var stdout_writer = std.fs.File.stdout().writer(&stdout_buffer);
-    const stdout = &stdout_writer.interface;
+pub fn Ast(T: type) type {
+    return union(enum) {
+        const Self = @This();
+        pub const LR = struct { l: Self, r: Self };
+        add: *const LR,
+        sub: *const LR,
+        mul: *const LR,
+        div: *const LR,
+        pow: *const LR,
+        val: T,
 
-    try stdout.print("Run `zig build test` to run the tests.\n", .{});
+        fn apply(f: fn (T, T) T, node: LR) ?T {
+            const l = node.l.eval() orelse return null;
+            const r = node.r.eval() orelse return null;
+            return f(l, r);
+        }
 
-    try stdout.flush(); // Don't forget to flush!
-}
+        pub fn eval(ast: Self) ?T {
+            return switch (ast) {
+                .add => |node| apply(fun.add, node.*),
+                .sub => |node| apply(fun.sub, node.*),
+                .mul => |node| apply(fun.mul, node.*),
+                .div => |node| apply(fun.div, node.*),
+                .pow => |node| apply(fun.pow, node.*),
+                .val => |val| val,
+            };
+        }
 
-pub fn add(a: i32, b: i32) i32 {
-    return a + b;
-}
-
-test "basic add functionality" {
-    try std.testing.expect(add(3, 7) == 10);
+        const fun = struct {
+            pub fn add(a: T, b: T) T {
+                return a + b;
+            }
+            pub fn sub(a: T, b: T) T {
+                return a - b;
+            }
+            pub fn mul(a: T, b: T) T {
+                return a * b;
+            }
+            pub fn div(a: T, b: T) T {
+                return a / b;
+            }
+            pub fn pow(a: T, b: T) T {
+                return std.math.pow(T, a, b);
+            }
+        };
+    };
 }
